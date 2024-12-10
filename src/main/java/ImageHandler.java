@@ -1,6 +1,7 @@
+import Pages.Sercher;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -94,14 +95,12 @@ public class ImageHandler extends JPanel {
         }
     }
 
-    // Método: Cambiar imagen mediante diálogo
+    // Método: Cambiar imagen mediante diálogo --------EDITADO----------
     private void changeImage() {
-        JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("Archivos de Imagen", "jpg", "jpeg", "png", "bmp", "gif");
-        fileChooser.setFileFilter(filter);
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            setImage(fileChooser.getSelectedFile());
+        File selectedFile = Sercher.showDialog((Frame) SwingUtilities.getWindowAncestor(this)); // Este método lo implementaremos en Sercher
+
+        if (selectedFile != null) {
+            setImage(selectedFile); // Utiliza el archivo seleccionado para cambiar la imagen
         }
     }
 
