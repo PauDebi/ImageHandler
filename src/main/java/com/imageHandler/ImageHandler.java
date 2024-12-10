@@ -1,3 +1,5 @@
+package com.imageHandler;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
