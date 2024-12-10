@@ -1,0 +1,59 @@
+JFDML JFormDesigner: "8.2.4.0.393" Java: "17.0.8" encoding: "UTF-8"
+
+new FormModel {
+	contentType: "form/swing"
+	root: new FormRoot {
+		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class net.miginfocom.swing.MigLayout ) {
+			"$layoutConstraints": "hidemode 3"
+			"$columnConstraints": "[fill][fill][fill][fill][fill][fill]"
+			"$rowConstraints": "[][][][][][][][][][][][]"
+		} ) {
+			name: "this"
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "imageLabel"
+				"text": "No Image Loaded"
+			}, new FormLayoutConstraints( class net.miginfocom.layout.CC ) {
+				"value": "cell 0 0 6 11"
+			} )
+			add( new FormComponent( "javax.swing.JButton" ) {
+				name: "btnZoomIn"
+				"text": "Zoom In"
+				addEvent( new FormEvent( "java.awt.event.ActionListener", "actionPerformed", "zoom_in", true ) )
+			}, new FormLayoutConstraints( class net.miginfocom.layout.CC ) {
+				"value": "cell 0 11"
+			} )
+			add( new FormComponent( "javax.swing.JButton" ) {
+				name: "btnZoomOut"
+				"text": "Zoom Out"
+			}, new FormLayoutConstraints( class net.miginfocom.layout.CC ) {
+				"value": "cell 1 11"
+			} )
+			add( new FormComponent( "javax.swing.JLabel" ) {
+				name: "zoomLabel"
+				"text": "Zoom:"
+			}, new FormLayoutConstraints( class net.miginfocom.layout.CC ) {
+				"value": "cell 2 11"
+			} )
+			add( new FormComponent( "javax.swing.JTextField" ) {
+				name: "zoomField"
+			}, new FormLayoutConstraints( class net.miginfocom.layout.CC ) {
+				"value": "cell 2 11"
+			} )
+			add( new FormComponent( "javax.swing.JButton" ) {
+				name: "btnRotate"
+				"text": "Rotate"
+			}, new FormLayoutConstraints( class net.miginfocom.layout.CC ) {
+				"value": "cell 3 11"
+			} )
+			add( new FormComponent( "javax.swing.JButton" ) {
+				name: "btnChangeImage"
+				"text": "Change Image"
+			}, new FormLayoutConstraints( class net.miginfocom.layout.CC ) {
+				"value": "cell 4 11"
+			} )
+		}, new FormLayoutConstraints( null ) {
+			"location": new java.awt.Point( 0, 0 )
+			"size": new java.awt.Dimension( 515, 300 )
+		} )
+	}
+}
