@@ -1,0 +1,3 @@
+<configuration>
+    <logger name="com.azure.core.implementation.jackson.JacksonVersion" level="WARN"/>
+</configuration>
