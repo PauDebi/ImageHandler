@@ -5,13 +5,15 @@ import DataAccess.DataAccess;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 public class Sercher extends JDialog {
     private File selectedFile = null;
+    private boolean selected = false;
 
     public Sercher(Frame owner) {
-        super(owner, "Seleccionar Imagen", true);
+        super(owner, "Seleccionar Imagen, doble click para seleccionar", true);
         initComponents();
     }
 
@@ -22,7 +24,12 @@ public class Sercher extends JDialog {
 
         // Obtener rutas de imágenes desde DataAccess
         DataAccess dataAccess = new DataAccess();
-        List<File> imagePaths = dataAccess.getImagePaths();
+        List<File> imagePaths = null;
+        try {
+            imagePaths = dataAccess.getImages();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         if (imagePaths.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No se encontraron imágenes.", "Información", JOptionPane.INFORMATION_MESSAGE);
@@ -34,17 +41,6 @@ public class Sercher extends JDialog {
 
         JScrollPane scrollPane = new JScrollPane(thumbnailPanel);
         add(scrollPane, BorderLayout.CENTER);
-
-        // Botón de confirmación
-        JButton selectButton = new JButton("Seleccionar");
-        selectButton.addActionListener(e -> {
-            if (selectedFile != null) {
-                dispose(); // Cerrar el diálogo
-            } else {
-                JOptionPane.showMessageDialog(this, "Seleccione una imagen.", "Advertencia", JOptionPane.WARNING_MESSAGE);
-            }
-        });
-        add(selectButton, BorderLayout.SOUTH);
 
         setSize(700, 400);
         setLocationRelativeTo(getOwner());
@@ -70,8 +66,17 @@ public class Sercher extends JDialog {
         panel.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (selectedFile != null && !selectedFile.equals(file)) {
+                    selected = false; // Reiniciar la selección si cambias de archivo
+                }
+
                 selectedFile = file; // Guardar archivo seleccionado
                 highlightSelection(panel, (JPanel) panel.getParent()); // Resaltar panel seleccionado
+
+                if(selected) {
+                    dispose(); // Cerrar el diálogo
+                }
+                selected = true;
             }
         });
 
