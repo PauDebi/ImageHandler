@@ -3,169 +3,205 @@ package com.imageHandler;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 
 public class ImageHandler extends JPanel {
-    // Propiedades principales
     private BufferedImage image = null;
-    private double scale = 1.0;
-    private int rotation = 0;
 
-    // Controles de la interfaz
+    // Tabla para gestionar las imágenes
+    private JTable imageTable;
+    private DefaultTableModel tableModel;
+
+    // Botón para añadir imágenes
+    private JButton btnAddImage;
+
+    // Panel para mostrar la imagen ampliada
+    private JPanel imagePanel;
     private JLabel imageLabel;
-    private JTextField zoomField;
-    private JButton btnZoomIn;
-    private JButton btnZoomOut;
-    private JButton btnRotate;
-    private JButton btnChangeImage;
+    private JButton btnBack;
+
+    // Mapa para almacenar las ubicaciones originales de las imágenes
+    private HashMap<Point, String> imageMap;
 
     // Constructor
     public ImageHandler() {
         setLayout(new BorderLayout());
 
-        // Área de visualización
-        imageLabel = new JLabel("No Image Loaded", SwingConstants.CENTER);
-        imageLabel.setPreferredSize(new Dimension(400, 300));
-        add(imageLabel, BorderLayout.CENTER);
+        imageMap = new HashMap<>(); // Inicializar el mapa
 
-        // Panel de controles inferiores
+        // Modelo de tabla con 5 columnas fijas
+        tableModel = new DefaultTableModel(0, 5) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Hacer todas las celdas no editables
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return ImageIcon.class; // Todas las columnas contienen imágenes
+            }
+        };
+
+        imageTable = new JTable(tableModel);
+        imageTable.setRowHeight(64); // Ajustar la altura de las filas para las miniaturas
+        imageTable.setTableHeader(null); // Ocultar encabezado de la tabla
+
+        JScrollPane scrollPane = new JScrollPane(imageTable);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        add(scrollPane, BorderLayout.CENTER);
+
+        // Panel de controles
         JPanel controlPanel = new JPanel();
-        btnZoomIn = new JButton("Zoom In");
-        btnZoomOut = new JButton("Zoom Out");
-        btnRotate = new JButton("Rotate");
-        btnChangeImage = new JButton("Change Image");
-        zoomField = new JTextField(String.format("%.2f", scale), 5); // Inicializar con el valor actual de escala
-
-        controlPanel.add(btnZoomIn);
-        controlPanel.add(btnZoomOut);
-        controlPanel.add(new JLabel("Zoom:"));
-        controlPanel.add(zoomField);
-        controlPanel.add(btnRotate);
-        controlPanel.add(btnChangeImage);
+        btnAddImage = new JButton("Add Image");
+        controlPanel.add(btnAddImage);
         add(controlPanel, BorderLayout.SOUTH);
 
-        // Listeners
-        btnZoomIn.addActionListener(e -> {
-            zoomImage(1.1);
-            updateZoomField();
-        });
-        btnZoomOut.addActionListener(e -> {
-            zoomImage(0.9);
-            updateZoomField();
-        });
-        btnRotate.addActionListener(e -> rotateImage(90));
-        btnChangeImage.addActionListener(e -> changeImage());
+        // Crear panel para mostrar la imagen ampliada
+        imagePanel = new JPanel(new BorderLayout());
+        imageLabel = new JLabel();
+        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        btnBack = new JButton("Back to Table");
+        btnBack.addActionListener(e -> showTable());
+        imagePanel.add(imageLabel, BorderLayout.CENTER);
+        imagePanel.add(btnBack, BorderLayout.SOUTH);
 
-        // Listener para el campo de zoom
-        zoomField.addActionListener(e -> {
-            try {
-                double newScale = Double.parseDouble(zoomField.getText());
-                if (newScale > 0) {
-                    scale = newScale;
-                    updateImageDisplay();
-                } else {
-                    JOptionPane.showMessageDialog(this, "El zoom debe ser un valor positivo.", "Error", JOptionPane.ERROR_MESSAGE);
-                    updateZoomField(); // Restaurar el valor anterior
+        // Listeners
+        btnAddImage.addActionListener(e -> addImageToTable());
+
+        // Añadir listener para doble clic
+        imageTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) { // Doble clic
+                    int row = imageTable.rowAtPoint(e.getPoint());
+                    int column = imageTable.columnAtPoint(e.getPoint());
+                    Object value = tableModel.getValueAt(row, column);
+                    if (value instanceof ImageIcon) {
+                        Point cell = new Point(row, column);
+                        String filePath = imageMap.get(cell);
+                        if (filePath != null) {
+                            showOriginalImage(filePath);
+                        }
+                    }
                 }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Ingrese un valor numérico válido.", "Error", JOptionPane.ERROR_MESSAGE);
-                updateZoomField(); // Restaurar el valor anterior
             }
         });
+
+        // Configuración inicial de la tabla
+        initializeTableWithEmptyRows(5); // Añadir 5 filas vacías por defecto
     }
 
-    // Método: Cargar nueva imagen
-    private void setImage(File file) {
-        try {
-            BufferedImage newImage = ImageIO.read(file);
-            if (newImage != null) {
-                image = newImage;
-                scale = 1.0;
-                rotation = 0;
-                updateZoomField();
-                updateImageDisplay();
-            } else {
-                JOptionPane.showMessageDialog(this, "El archivo seleccionado no es una imagen válida.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Error al cargar la imagen: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    private void initializeTableWithEmptyRows(int rowCount) {
+        for (int i = 0; i < rowCount; i++) {
+            Object[] emptyRow = new Object[tableModel.getColumnCount()];
+            tableModel.addRow(emptyRow);
         }
     }
 
-    // Método: Cambiar imagen mediante diálogo
-    private void changeImage() {
+    private void addImageToTable() {
         JFileChooser fileChooser = new JFileChooser();
         FileNameExtensionFilter filter = new FileNameExtensionFilter("Archivos de Imagen", "jpg", "jpeg", "png", "bmp", "gif");
         fileChooser.setFileFilter(filter);
         int result = fileChooser.showOpenDialog(this);
+
         if (result == JFileChooser.APPROVE_OPTION) {
-            setImage(fileChooser.getSelectedFile());
+            File file = fileChooser.getSelectedFile();
+            try {
+                BufferedImage img = ImageIO.read(file);
+                if (img != null) {
+                    ImageIcon thumbnail = new ImageIcon(img.getScaledInstance(64, 64, Image.SCALE_SMOOTH));
+
+                    // Buscar fila disponible o crear una nueva
+                    int rowCount = tableModel.getRowCount();
+                    int columnCount = tableModel.getColumnCount();
+                    boolean added = false;
+
+                    for (int i = 0; i < rowCount; i++) {
+                        for (int j = 0; j < columnCount; j++) {
+                            if (tableModel.getValueAt(i, j) == null) {
+                                tableModel.setValueAt(thumbnail, i, j);
+                                imageMap.put(new Point(i, j), file.getAbsolutePath()); // Mapear celda a archivo
+                                added = true;
+                                break;
+                            }
+                        }
+                        if (added) break;
+                    }
+
+                    // Si no hay espacio, añadir una nueva fila
+                    if (!added) {
+                        Object[] newRow = new Object[columnCount];
+                        newRow[0] = thumbnail;
+                        tableModel.addRow(newRow);
+                        imageMap.put(new Point(rowCount, 0), file.getAbsolutePath()); // Mapear celda a archivo
+                    }
+
+                } else {
+                    JOptionPane.showMessageDialog(this, "El archivo seleccionado no es una imagen válida.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "Error al cargar la imagen: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
-    // Método: Hacer zoom en la imagen
-    private void zoomImage(double factor) {
-        if (image != null) {
-            scale *= factor;
-            updateImageDisplay();
+    private void showOriginalImage(String filePath) {
+        try {
+            BufferedImage originalImage = ImageIO.read(new File(filePath));
+            if (originalImage != null) {
+                int maxWidth = 800;
+                int maxHeight = 600;
+
+                int originalWidth = originalImage.getWidth();
+                int originalHeight = originalImage.getHeight();
+
+                // Calcular nuevas dimensiones manteniendo la relación de aspecto
+                double widthRatio = (double) maxWidth / originalWidth;
+                double heightRatio = (double) maxHeight / originalHeight;
+                double ratio = Math.min(widthRatio, heightRatio);
+
+                int newWidth = (int) (originalWidth * ratio);
+                int newHeight = (int) (originalHeight * ratio);
+
+                Image scaledImage = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+                imageLabel.setIcon(new ImageIcon(scaledImage));
+                removeAll();
+                add(imagePanel, BorderLayout.CENTER);
+                revalidate();
+                repaint();
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Error al cargar la imagen original: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    // Método: Rotar la imagen
-    private void rotateImage(int degrees) {
-        if (image != null) {
-            rotation = (rotation + degrees) % 360;
-            if (rotation < 0) rotation += 360;
-            updateImageDisplay();
-        }
+    private void showTable() {
+        removeAll();
+        JScrollPane scrollPane = new JScrollPane(imageTable);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        add(scrollPane, BorderLayout.CENTER);
+
+        JPanel controlPanel = new JPanel();
+        controlPanel.add(btnAddImage);
+        add(controlPanel, BorderLayout.SOUTH);
+
+        revalidate();
+        repaint();
     }
 
-    // Método: Actualizar la visualización de la imagen
-    private void updateImageDisplay() {
-        if (image == null) {
-            imageLabel.setText("No Image Loaded");
-            imageLabel.setIcon(null);
-        } else {
-            int w = image.getWidth();
-            int h = image.getHeight();
-
-            // Crear imagen escalada y rotada
-            BufferedImage transformedImage = new BufferedImage(w, h, image.getType());
-            Graphics2D g2d = transformedImage.createGraphics();
-
-            // Aplicar transformaciones
-            AffineTransform transform = new AffineTransform();
-            transform.translate(w / 2.0, h / 2.0);
-            transform.scale(scale, scale);
-            transform.rotate(Math.toRadians(rotation));
-            transform.translate(-w / 2.0, -h / 2.0);
-
-            g2d.setTransform(transform);
-            g2d.drawImage(image, 0, 0, null);
-            g2d.dispose();
-
-            // Actualizar JLabel con la nueva imagen
-            imageLabel.setText(null);
-            imageLabel.setIcon(new ImageIcon(transformedImage));
-        }
-    }
-
-    // Método: Actualizar el campo de zoom
-    private void updateZoomField() {
-        zoomField.setText(String.format("%.2f", scale));
-    }
-
-    // Método principal para probar el componente
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Image Handler Component");
+            JFrame frame = new JFrame("Image Handler with Table");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setContentPane(new ImageHandler());
-            frame.pack();
+            frame.setSize(800, 400);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
