@@ -22,13 +22,13 @@ public class Sercher extends JDialog {
 
         // Obtener rutas de imágenes desde DataAccess
         DataAccess dataAccess = new DataAccess();
-        List<String> imagePaths = dataAccess.getImagePaths();
+        List<File> imagePaths = dataAccess.getImagePaths();
 
         if (imagePaths.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No se encontraron imágenes.", "Información", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            for (String path : imagePaths) {
-                thumbnailPanel.add(createThumbnail(new File(path)));
+            for (File imag : imagePaths) {
+                thumbnailPanel.add(createThumbnail(imag));
             }
         }
 
