@@ -67,9 +67,11 @@ public class ImageEditor {
     // Método para abrir el editor con la imagen seleccionada
     public void editImage(BufferedImage image, SaveCallback callback) {
         if (image == null) {
-            JOptionPane.showMessageDialog(null, "No hay imagen cargada para editar.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Selecciona una imagen para editar", "Error", JOptionPane.ERROR_MESSAGE);
+            frame.dispose();
             return;
         }
+        frame.setVisible(true);
 
         originalImage = image;
         editedImage = new BufferedImage(originalImage.getWidth(), originalImage.getHeight(), originalImage.getType());

@@ -1,5 +1,7 @@
 package com.imageHandler;
 
+import com.Pages.Sercher;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -19,8 +21,9 @@ public class ImageHandler extends JPanel {
     private JTable imageTable;
     private DefaultTableModel tableModel;
 
-    // Botón para añadir imágenes
+    // Botones
     private JButton btnAddImage;
+    private JButton botonEditar;
 
     // Panel para mostrar la imagen ampliada
     private JPanel imagePanel;
@@ -58,9 +61,11 @@ public class ImageHandler extends JPanel {
         add(scrollPane, BorderLayout.CENTER);
 
         // Panel de controles
-        JPanel controlPanel = new JPanel();
-        btnAddImage = new JButton("Add Image");
-        controlPanel.add(btnAddImage);
+        JPanel controlPanel = new JPanel(new BorderLayout());
+        btnAddImage = new JButton("Load Image");
+        botonEditar = new JButton("Edit Image"); // Botón adicional
+        controlPanel.add(btnAddImage, BorderLayout.EAST);
+        controlPanel.add(botonEditar, BorderLayout.WEST); // Añadir botón a la izquierda
         add(controlPanel, BorderLayout.SOUTH);
 
         // Crear panel para mostrar la imagen ampliada
@@ -73,7 +78,8 @@ public class ImageHandler extends JPanel {
         imagePanel.add(btnBack, BorderLayout.SOUTH);
 
         // Listeners
-        btnAddImage.addActionListener(e -> addImageToTable());
+        btnAddImage.addActionListener(e -> addImageToTable(null));
+        botonEditar.addActionListener(e -> editImageButton()); // Listener del botón adicional
 
         // Añadir listener para doble clic
         imageTable.addMouseListener(new MouseAdapter() {
@@ -105,50 +111,46 @@ public class ImageHandler extends JPanel {
         }
     }
 
-    private void addImageToTable() {
-        JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("Archivos de Imagen", "jpg", "jpeg", "png", "bmp", "gif");
-        fileChooser.setFileFilter(filter);
-        int result = fileChooser.showOpenDialog(this);
+    private void addImageToTable(File file) {
 
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            try {
-                BufferedImage img = ImageIO.read(file);
-                if (img != null) {
-                    ImageIcon thumbnail = new ImageIcon(img.getScaledInstance(64, 64, Image.SCALE_SMOOTH));
+        if (file == null)
+            file = Sercher.showDialog((Frame) SwingUtilities.getWindowAncestor(this));
 
-                    // Buscar fila disponible o crear una nueva
-                    int rowCount = tableModel.getRowCount();
-                    int columnCount = tableModel.getColumnCount();
-                    boolean added = false;
+        try {
+            BufferedImage img = ImageIO.read(file);
+            if (img != null) {
+                ImageIcon thumbnail = new ImageIcon(img.getScaledInstance(64, 64, Image.SCALE_SMOOTH));
 
-                    for (int i = 0; i < rowCount; i++) {
-                        for (int j = 0; j < columnCount; j++) {
-                            if (tableModel.getValueAt(i, j) == null) {
-                                tableModel.setValueAt(thumbnail, i, j);
-                                imageMap.put(new Point(i, j), file.getAbsolutePath()); // Mapear celda a archivo
-                                added = true;
-                                break;
-                            }
+                // Buscar fila disponible o crear una nueva
+                int rowCount = tableModel.getRowCount();
+                int columnCount = tableModel.getColumnCount();
+                boolean added = false;
+
+                for (int i = 0; i < rowCount; i++) {
+                    for (int j = 0; j < columnCount; j++) {
+                        if (tableModel.getValueAt(i, j) == null) {
+                            tableModel.setValueAt(thumbnail, i, j);
+                            imageMap.put(new Point(i, j), file.getAbsolutePath()); // Mapear celda a archivo
+                            added = true;
+                            break;
                         }
-                        if (added) break;
                     }
-
-                    // Si no hay espacio, añadir una nueva fila
-                    if (!added) {
-                        Object[] newRow = new Object[columnCount];
-                        newRow[0] = thumbnail;
-                        tableModel.addRow(newRow);
-                        imageMap.put(new Point(rowCount, 0), file.getAbsolutePath()); // Mapear celda a archivo
-                    }
-
-                } else {
-                    JOptionPane.showMessageDialog(this, "El archivo seleccionado no es una imagen válida.", "Error", JOptionPane.ERROR_MESSAGE);
+                    if (added) break;
                 }
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Error al cargar la imagen: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+
+                // Si no hay espacio, añadir una nueva fila
+                if (!added) {
+                    Object[] newRow = new Object[columnCount];
+                    newRow[0] = thumbnail;
+                    tableModel.addRow(newRow);
+                    imageMap.put(new Point(rowCount, 0), file.getAbsolutePath()); // Mapear celda a archivo
+                }
+
+            } else {
+                JOptionPane.showMessageDialog(this, "El archivo seleccionado no es una imagen válida.", "Error", JOptionPane.ERROR_MESSAGE);
             }
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error al cargar la imagen: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -188,13 +190,54 @@ public class ImageHandler extends JPanel {
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         add(scrollPane, BorderLayout.CENTER);
 
-        JPanel controlPanel = new JPanel();
-        controlPanel.add(btnAddImage);
+        JPanel controlPanel = new JPanel(new BorderLayout());
+        controlPanel.add(btnAddImage, BorderLayout.EAST);
+        controlPanel.add(botonEditar, BorderLayout.WEST);
         add(controlPanel, BorderLayout.SOUTH);
 
         revalidate();
         repaint();
     }
+
+    private void editImageButton() {
+        ImageEditor imageEditor = new ImageEditor();
+
+        imageEditor.editImage(getSelectedImageFile(), (editedImage) -> {
+            if (editedImage == null) {
+                return;
+            }
+            File file = new File("imagenes/edited_image.png");
+            int counter = 1;
+            while (file.exists()) {
+                file = new File("imagenes/edited_image_" + counter + ".png");
+                counter++;
+            }
+            try {
+                ImageIO.write(editedImage, "png", file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            addImageToTable(file);
+
+        });
+    }
+    private BufferedImage getSelectedImageFile() {
+        int selectedRow = imageTable.getSelectedRow();
+        int selectedColumn = imageTable.getSelectedColumn();
+        if (selectedRow != -1 && selectedColumn != -1) {
+            Point cell = new Point(selectedRow, selectedColumn);
+            String filePath = imageMap.get(cell);
+            if (filePath != null) {
+                try {
+                    return ImageIO.read(new File(filePath));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
+
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {

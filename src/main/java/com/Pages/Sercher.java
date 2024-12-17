@@ -1,6 +1,7 @@
-package Pages;
+package com.Pages;
 
-import DataAccess.DataAccess;
+
+import com.dataAccess.DataAccess;
 
 import javax.swing.*;
 import java.awt.*;
